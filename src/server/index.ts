@@ -17,8 +17,25 @@ async function executeWorkflow(variables: Record<string, string> = {}) {
         // Navigate to start
         await page.goto("https://magical-medical-form.netlify.app/");
 
-        // Run the agent
-        const success = await runWorkflow(page, "Fill out the medical form with the provided details.", variables);
+        // Run the Multi-Agent Supervisor
+        const success = await runWorkflow(
+            page,
+            "Execute full medical form submission workflow.",
+            {
+                // Defaults
+                firstName: "John",
+                lastName: "Doe",
+                dob: "1990-01-01",
+                medicalId: "91927885",
+                gender: "Male",
+                bloodType: "O+",
+                allergies: "None",
+                medications: "None",
+                emergencyContact: "Jane Doe",
+                emergencyPhone: "555-0123",
+                ...variables // Override with API inputs
+            }
+        );
 
         if (success) {
             console.log("Workflow completed successfully.");
