@@ -1,4 +1,4 @@
-# Magical Take-Home
+# Magical Project
 
 Multi-agent browser automation for filling out medical forms. Built with TypeScript, Playwright, and Gemini.
 
