@@ -42,7 +42,20 @@ npm run start:server     # Start API + CRON scheduler
 ```bash
 curl -X POST http://localhost:3000/workflow \
   -H "Content-Type: application/json" \
-  -d '{"variables": {"firstName": "John", "lastName": "Doe"}}'
+  -d '{
+    "variables": {
+      "firstName": "Arman",
+      "lastName": "Grewal",
+      "dob": "1995-03-15",
+      "medicalId": "MED78901",
+      "gender": "Male",
+      "bloodType": "O+",
+      "allergies": "None",
+      "medications": "None",
+      "emergencyContact": "Parent",
+      "emergencyPhone": "555-9876"
+    }
+  }'
 ```
 
 ## How It Works
@@ -76,8 +89,8 @@ src/
 
 ## Bonus Features
 
-- ✅ Handles complex accordion navigation
-- ✅ REST API endpoint
-- ✅ Dynamic variable passing
-- ✅ CRON scheduling (every 5 min)
-- ✅ Multi-agent framework with evals
+- Handles complex accordion navigation
+- REST API endpoint
+- Dynamic variable passing
+- CRON scheduling (every 5 min)
+- Multi-agent framework with evaluation
