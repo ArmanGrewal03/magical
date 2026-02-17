@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-02-17T02:39:53.608Z",
+  "config": {
+    "iterations": 8
+  },
+  "metrics": {
+    "successRate": 100,
+    "avgDurationMs": 30092.125,
+    "totalDurationMs": 241022
+  },
+  "runs": [
+    {
+      "iteration": 1,
+      "success": true,
+      "durationMs": 30745
+    },
+    {
+      "iteration": 2,
+      "success": true,
+      "durationMs": 26135
+    },
+    {
+      "iteration": 3,
+      "success": true,
+      "durationMs": 30347
+    },
+    {
+      "iteration": 4,
+      "success": true,
+      "durationMs": 29699
+    },
+    {
+      "iteration": 5,
+      "success": true,
+      "durationMs": 28582
+    },
+    {
+      "iteration": 6,
+      "success": true,
+      "durationMs": 32662
+    },
+    {
+      "iteration": 7,
+      "success": true,
+      "durationMs": 35208
+    },
+    {
+      "iteration": 8,
+      "success": true,
+      "durationMs": 27359
+    }
+  ]
+}

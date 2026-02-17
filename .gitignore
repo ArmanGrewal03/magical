@@ -1,0 +1,17 @@
+
+node_modules/
+.env
+
+*.log
+run_logs.json
+
+
+.DS_Store
+Thumbs.db
+
+
+.vscode/
+
+
+*.tmp
+.cache/
