@@ -1,135 +1,119 @@
-import { generateText, CoreMessage, tool } from "ai";
 import { Page } from "playwright";
-import * as fs from "fs";
-import { createAgentTools } from "./tools";
+import { runAgentTask } from "./worker";
+import { WorkflowLogger } from "./logger";
 import { verifySuccess } from "./verifier";
-import { model } from "../_internal/setup";
 
-interface AgentStep {
-    step: number;
-    thought: string;
-    action: string; // JSON string of tool calls
-    result: string; // JSON string of tool results
-    timestamp: string;
-}
-
+// The Supervisor Orchestrator
 export async function runWorkflow(page: Page, goal: string, variables: Record<string, string> = {}) {
-    const tools = createAgentTools(page);
-    const maxSteps = 20;
-    let steps = 0;
-    const logs: AgentStep[] = [];
-    const logFile = "run_logs.json";
+    // Initialize Logger
+    const logger = new WorkflowLogger();
+    console.log(`Starting Multi-Agent Workflow. Logs at: ${logger.getLogDir()}`);
 
-    console.log(`Starting workflow: ${goal}`);
-    console.log(`Variables:`, variables);
+    // Create Variable Context String
+    const varContext = Object.entries(variables).map(([k, v]) => `- ${k}: ${v}`).join("\n");
 
-    // Initialize messages with system prompt and user goal
-    const messages: CoreMessage[] = [
-        {
-            role: "system",
-            content: `You are a precise browser automation agent. 
-      Your goal is to complete the form submission workflow designated by the user.
-      
-      IMPORTANT: Use CSS selectors for form fields. The form has these fields:
-      - First Name: #firstName
-      - Last Name: #lastName  
-      - Date of Birth: #dateOfBirth
-      - Medical ID: #medicalId
-      - To expand "Personal Information" section: button:has-text("Personal Information")
-      - Submit button: button:has-text("Submit")
-      
-      ALWAYS use getPageState first if you need to see the page structure.
-      Verify your actions were successful by checking the result messages.
-      If you encounter an error, try a different selector or approach.
-      The user has provided the following variables: ${JSON.stringify(variables)}`
-        },
-        {
-            role: "user",
-            content: `Goal: ${goal}\nCurrent URL: ${page.url()}`
+    try {
+        // Step 1: Personal Info Agent
+        console.log("--- Spawning: PersonalInformationAgent ---");
+        const personalInfoSuccess = await runAgentTask(
+            page,
+            `You are the 'PersonalInformationAgent'. 
+             Your goal is to fill out the 'Personal Information' section of the form.
+             Use the 'getPageState' tool to understand the fields available (e.g. First Name, Last Name, DOB, Medical ID).
+             Use the 'fillField' tool to fill them.
+             
+             Context Variables:
+             ${varContext}
+             
+             Instructions:
+             1. Look at the page.
+             2. Identify the fields for First Name, Last Name, Date of Birth, and Medical ID.
+             3. Fill them out using the variables provided.
+             4. Once filled, stop. DO NOT click buttons to open other sections.
+             
+             Takes a screenshot named 'personal_info_filled' when done.
+            `,
+            logger,
+            "PersonalInformationAgent"
+        );
+        if (!personalInfoSuccess) throw new Error("PersonalInformationAgent failed.");
+
+        // Step 2: Medical Info Agent
+        console.log("--- Spawning: MedicalInformationAgent ---");
+        const medicalInfoSuccess = await runAgentTask(
+            page,
+            `You are the 'MedicalInformationAgent'.
+             Your goal is to fill out the 'Medical Information' section.
+             
+             Context Variables:
+             ${varContext}
+             
+             Instructions:
+             1. Find and click the button that opens 'Medical Information' (it might be an accordion).
+             2. Wait for the section to open.
+             3. Fill out Gender, Blood Type, Allergies, and Medications.
+             4. Use 'fillField' or 'selectOption' as appropriate.
+             5. Once filled, stop.
+             
+             Takes a screenshot named 'medical_info_filled' when done.
+            `,
+            logger,
+            "MedicalInformationAgent"
+        );
+        if (!medicalInfoSuccess) throw new Error("MedicalInformationAgent failed.");
+
+        // Step 3: Emergency Contact Agent
+        console.log("--- Spawning: EmergencyContactAgent ---");
+        const emergencySuccess = await runAgentTask(
+            page,
+            `You are the 'EmergencyContactAgent'.
+             Your goal is to fill out the 'Emergency Contact' section.
+             
+             Context Variables:
+             ${varContext}
+             
+             Instructions:
+             1. Find and click the button that opens 'Emergency Contact'.
+             2. Fill out Emergency Contact Name and Phone Number.
+             3. Once filled, stop.
+             
+             Takes a screenshot named 'emergency_info_filled' when done.
+            `,
+            logger,
+            "EmergencyContactAgent"
+        );
+        if (!emergencySuccess) throw new Error("EmergencyContactAgent failed.");
+
+        // Step 4: Submission Agent
+        console.log("--- Spawning: SubmissionAgent ---");
+        const submissionSuccess = await runAgentTask(
+            page,
+            `You are the 'SubmissionAgent'.
+             Your goal is to submit the form and verify success.
+             
+             Instructions:
+             1. Find and click the 'Submit' button.
+             2. Check for success message or URL change.
+             3. Take a final screenshot named 'submission_complete'.
+            `,
+            logger,
+            "SubmissionAgent"
+        );
+
+        // Final Global Verification
+        const finalSuccess = await verifySuccess(page);
+        if (finalSuccess) {
+            console.log(`Workflow Completion Success! Report generated at ${logger.getLogDir()}/report.html`);
+            return true;
+        } else {
+            // Fallback: Use Human in the Loop if autonomous verification fails?
+            // For now, just log failure.
+            console.log("Automated verification failed.");
+            return false;
         }
-    ];
 
-    // Start log file
-    fs.writeFileSync(logFile, JSON.stringify([], null, 2));
-
-    while (steps < maxSteps) {
-        steps++;
-        console.log(`--- Step ${steps} ---`);
-
-        try {
-            // Generate text with tools
-            const response = await generateText({
-                model,
-                messages,
-                tools: tools,
-                maxSteps: 5, // Allow multi-step reasoning/tool calls in one go if needed
-            });
-
-            // Add the assistant's response to history
-            const content: any[] = [];
-            if (response.text) {
-                content.push({ type: "text", text: response.text });
-            }
-            if (response.toolCalls) {
-                response.toolCalls.forEach(tc => {
-                    content.push({ type: "tool-call", toolCallId: tc.toolCallId, toolName: tc.toolName, args: tc.args });
-                });
-            }
-
-            messages.push({
-                role: "assistant",
-                content: content as any,
-            });
-
-            // Also add tool results to history if any
-            if (response.toolResults && response.toolResults.length > 0) {
-                messages.push({
-                    role: "tool",
-                    content: response.toolResults,
-                });
-            }
-
-            // Log the step (structured logging)
-            const stepLog: AgentStep = {
-                step: steps,
-                thought: response.text || "No text thought (Tool call only)",
-                action: JSON.stringify(response.toolCalls),
-                result: JSON.stringify(response.toolResults),
-                timestamp: new Date().toISOString(),
-            };
-            logs.push(stepLog);
-            fs.writeFileSync(logFile, JSON.stringify(logs, null, 2));
-
-            console.log(`Thought: ${stepLog.thought}`);
-            if (response.toolCalls?.length) {
-                console.log(`Tool Calls: ${response.toolCalls.map(tc => tc.toolName).join(", ")}`);
-            }
-
-            // Check for success via verifying logic
-            // Note: We check AFTER the model has acted.
-            const success = await verifySuccess(page);
-            if (success) {
-                console.log("Success criteria met based on verification!");
-                return true;
-            }
-
-            // If the model decides it is done, it might just stop calling tools.
-            // But we enforce "success" via verifySuccess. 
-            // If no tools called and verifySuccess is false, we might be stuck.
-            // We can prompt it to continue if needed, but the loop continues naturally.
-            // Let's inject current URL to keep it grounded if it's struggling?
-            // For now, relies on the `toolResults` from `navigate` etc to provide feedback.
-
-        } catch (error: any) {
-            console.error("Error during step:", error);
-
-            messages.push({
-                role: "user",
-                content: `Error occurred: ${error}. Please try to fix or try a different approach.`
-            });
-        }
+    } catch (error) {
+        console.error("Workflow Orchestration Error:", error);
+        return false;
     }
-
-    console.log("Max steps reached without success.");
-    return false;
 }

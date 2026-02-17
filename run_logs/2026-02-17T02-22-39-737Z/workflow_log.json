@@ -1,0 +1,12 @@
+[
+  {
+    "step": 1,
+    "agent": "PersonalInformationAgent",
+    "thought": "CRASHED",
+    "toolCalls": [],
+    "toolResults": [
+      "Error: AI_APICallError: * GenerateContentRequest.contents: contents is not specified\n"
+    ],
+    "timestamp": "2026-02-17T02:22:39.902Z"
+  }
+]

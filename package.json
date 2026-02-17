@@ -4,7 +4,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node ./src/_internal/run.ts",
-    "start:server": "ts-node ./src/server/index.ts"
+    "start:server": "ts-node ./src/server/index.ts",
+    "eval": "ts-node ./src/scripts/run_evals.ts"
   },
   "keywords": [],
   "author": "",

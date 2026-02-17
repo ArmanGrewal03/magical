@@ -18,10 +18,16 @@ export async function main() {
       firstName: "John",
       lastName: "Doe",
       dob: "1990-01-01",
-      medicalId: "91927885"
+      medicalId: "91927885",
+      gender: "Male",
+      bloodType: "O+",
+      allergies: "Penicillin",
+      medications: "None",
+      emergencyContact: "Jane Doe",
+      emergencyPhone: "555-0123"
     };
 
-    await runWorkflow(page, "Fill out the medical form for John Doe.", variables);
+    await runWorkflow(page, "Fill out the complete medical form for John Doe, including personal information, medical history, and emergency contact.", variables);
 
   } catch (error) {
     console.error("Main execution error:", error);
