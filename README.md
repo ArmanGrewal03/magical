@@ -1,81 +1,83 @@
-# Magical Agentic Workflow
+# Magical Take-Home
 
-This repository contains a robust, multi-agent browser automation framework built for the Magical Junior Software Engineer take-home challenge. It meets all core requirements and includes several enhancements inspired by Magical's engineering philosophy: multi-agent orchestration, human-in-the-loop fallback, and automated evaluations.
+Multi-agent browser automation for filling out medical forms. Built with TypeScript, Playwright, and Gemini.
 
-## Key Features
+## What It Does
 
-*   **Multi-Agent Architecture**: Uses a **Supervisor-Worker** pattern. A main orchestrator spawns specialized agents (`PersonalInformationAgent`, `MedicalInformationAgent`, `EmergencyContactAgent`, `SubmissionAgent`) to handle distinct parts of the workflow. This reduces context window usage and hallucinations.
-*   **Reliability & Auditing**: Every run generates a detailed **HTML Report** with screenshots and reasoning traces, saved to `run_logs/`.
-*   **Self-Healing Selectors**: Agents use "smart" tools that locate elements by Label, Role, or Text, ensuring resilience against minor UI changes.
-*   **Human-in-the-Loop**: Includes an `askHuman` tool that allows an agent to pause and request help via the console if it gets stuck.
-*   **Automated Evaluations**: Includes a dedicated script (`npm run eval`) to run multiple iterations and calculate a Reliability Score (Success Rate & Avg Duration).
-*   **API & Scheduling**: A Hono server exposes a REST endpoint and runs a cron job for automated execution.
+Fills out the [Magical medical form](https://magical-medical-form.netlify.app/) using AI agents. Each agent handles one section:
+- Personal info (name, DOB, medical ID)
+- Medical info (gender, blood type, allergies)
+- Emergency contact
+- Form submission
 
-## Why This Architecture?
+## Quick Start
 
-1.  **Reliability First**: The prompt highlighted that "Magical's agents are purpose-built to be predictable."
-    *   **Solution**: I implemented a **Supervisor-Worker** pattern. Instead of one large prompt, specialized agents (`MedicalInformationAgent`, `EmergencyContactAgent`) focus on small, isolated tasks. This significantly reduces hallucinations.
-2.  **Auditability**: "Auditing, recording, and keeping track of every reasoning step."
-    *   **Solution**: Every run generates a **Visual HTML Report** (with step-by-step screenshots and reasoning logs) locally in `run_logs/`. This provides full transparency into *why* the agent took an action.
-3.  **Evaluations**: "Use evals frameworks... to decide which model is best."
-    *   **Solution**: I built a dedicated `npm run eval` script that runs the workflow `N` times to calculate a **Reliability Score (Success Rate)**. This ensures code changes don't silently break the agent.
-4.  **Resilience**: The video showed an agent navigating through complex workflows.
-    *   **Solution**: My `click` and `fillField` tools use "fuzzy matching" strategies (Label -> Role -> Text -> Selector) to "self-heal" if the underlying HTML changes slightly.
+```bash
+npm install
+npx playwright install
+```
 
-## Setup
+Create `.env`:
+```
+GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
+```
 
-1.  **Install Dependencies**
-    ```bash
-    npm install
-    npx playwright install
-    ```
-
-2.  **Configure Environment**
-    Create a `.env` file with your Gemini API key:
-    ```bash
-    GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
-    ```
-
-## Usage
-
-### 1. Run the Agent (Local Dev)
-Executes a single run of the workflow with full logging.
+Run it:
 ```bash
 npm run dev
 ```
-Check the `run_logs/` folder for the generated HTML report.
 
-### 2. Run Evaluations (Reliability Test)
-Runs the workflow `N` times (default: 3) to measure stability and performance.
+Check `run_logs/` for the HTML report with screenshots.
+
+## Commands
+
 ```bash
-npm run eval         # Runs 3 times
-npm run eval 5       # Runs 5 times
+npm run dev              # Run once
+npm run eval             # Run 3 times, get success rate
+npm run start:server     # Start API + CRON scheduler
 ```
 
-### 3. Start the Server (API & Cron)
-Starts the Hono server with a POST endpoint and a 5-minute cron scheduler.
-```bash
-npm run start:server
-```
-**Trigger via API:**
+## API Usage
+
 ```bash
 curl -X POST http://localhost:3000/workflow \
   -H "Content-Type: application/json" \
-  -d '{"variables": {"firstName": "API", "lastName": "User"}}'
+  -d '{"variables": {"firstName": "John", "lastName": "Doe"}}'
 ```
+
+## How It Works
+
+**Multi-Agent Pattern**: One supervisor coordinates 4 specialized agents. Each agent has a narrow job, which reduces errors.
+
+**Smart Tools**: Instead of brittle CSS selectors, tools find elements by label, role, or text. If the HTML changes slightly, it still works.
+
+**Audit Logs**: Every run saves an HTML report with screenshots and reasoning steps.
+
+**Human Fallback**: If automated verification fails, it asks you to confirm success.
+
+## Architecture
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full diagram and design decisions.
 
 ## Project Structure
 
-*   **src/agent/core.ts**: The Supervisor orchestrator logic.
-*   **src/agent/worker.ts**: The reusable Worker Agent loop.
-*   **src/agent/tools.ts**: Smart tools (fillField, click) with fuzzy matching.
-*   **src/agent/logger.ts**: Structured logging and HTML report generation.
-*   **src/scripts/run_evals.ts**: The evaluation framework script.
-*   **src/server/**: Hono server and cron job configuration.
+```
+src/
+├── agent/
+│   ├── core.ts       # Supervisor
+│   ├── worker.ts     # Agent loop
+│   ├── tools.ts      # Smart tools
+│   └── logger.ts     # HTML reports
+├── scripts/
+│   └── run_evals.ts  # Evaluation framework
+└── server/
+    └── index.ts      # API + CRON
+```
 
-## Bonus Points Implemented
-1.  **Complex Form Handling**: Dynamic accordion navigation (Medical/Emergency sections).
-2.  **API Endpoint**: Trigger runs remotely via `POST /workflow`.
-3.  **Dynamic Variables**: Prompt accepts custom variables.
-4.  **Scheduling**: Cron job runs every 5 minutes.
-5.  **Something Else**: Implemented a **Multi-Agent Framework**, **Evaluations Script**, and **Visual Audit Logs**.
+## Bonus Features
+
+- ✅ Handles complex accordion navigation
+- ✅ REST API endpoint
+- ✅ Dynamic variable passing
+- ✅ CRON scheduling (every 5 min)
+- ✅ Multi-agent framework with evals
