@@ -1,20 +1,17 @@
-# Dependencies
-node_modules/
 
-# Environment variables
+node_modules/
 .env
 
-# Logs
 *.log
 run_logs.json
 
-# OS files
+
 .DS_Store
 Thumbs.db
 
-# IDE
+
 .vscode/
 
-# Temporary files
+
 *.tmp
 .cache/
