@@ -9,6 +9,7 @@ export async function main() {
     headless: false
   });
 
+  let success = false;
   try {
     const page = await browser.newPage();
     await page.goto("https://magical-medical-form.netlify.app/");
@@ -27,11 +28,16 @@ export async function main() {
       emergencyPhone: "555-0123"
     };
 
-    await runWorkflow(page, "Fill out the complete medical form for John Doe, including personal information, medical history, and emergency contact.", variables);
+    success = await runWorkflow(page, "Fill out the complete medical form for John Doe, including personal information, medical history, and emergency contact.", variables);
 
   } catch (error) {
     console.error("Main execution error:", error);
   } finally {
-    await browser.close();
+    if (browser) await browser.close();
+  }
+  if (success) {
+    console.log("Workflow completed successfully.");
+  } else {
+    console.log("Workflow failed.");
   }
 }

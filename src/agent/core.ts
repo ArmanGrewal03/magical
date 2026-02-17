@@ -3,18 +3,15 @@ import { runAgentTask } from "./worker";
 import { WorkflowLogger } from "./logger";
 import { verifySuccess } from "./verifier";
 
-// The Supervisor Orchestrator
 export async function runWorkflow(page: Page, goal: string, variables: Record<string, string> = {}) {
-    // Initialize Logger
     const logger = new WorkflowLogger();
-    console.log(`Starting Multi-Agent Workflow. Logs at: ${logger.getLogDir()}`);
+    console.log(`Starting multi-agent workflow. Logs at: ${logger.getLogDir()}`);
 
-    // Create Variable Context String
     const varContext = Object.entries(variables).map(([k, v]) => `- ${k}: ${v}`).join("\n");
 
     try {
-        // Step 1: Personal Info Agent
-        console.log("--- Spawning: PersonalInformationAgent ---");
+        // Personal Info Section Agent
+        console.log("--- Starting: PersonalInformationAgent---");
         const personalInfoSuccess = await runAgentTask(
             page,
             `You are the 'PersonalInformationAgent'. 
@@ -38,8 +35,8 @@ export async function runWorkflow(page: Page, goal: string, variables: Record<st
         );
         if (!personalInfoSuccess) throw new Error("PersonalInformationAgent failed.");
 
-        // Step 2: Medical Info Agent
-        console.log("--- Spawning: MedicalInformationAgent ---");
+        // Medical Info Section Agent
+        console.log("--- Starting: MedicalInformationAgent ---");
         const medicalInfoSuccess = await runAgentTask(
             page,
             `You are the 'MedicalInformationAgent'.
@@ -62,8 +59,8 @@ export async function runWorkflow(page: Page, goal: string, variables: Record<st
         );
         if (!medicalInfoSuccess) throw new Error("MedicalInformationAgent failed.");
 
-        // Step 3: Emergency Contact Agent
-        console.log("--- Spawning: EmergencyContactAgent ---");
+        // Emergency Contact Section Agent
+        console.log("--- Starting: EmergencyContactAgent ---");
         const emergencySuccess = await runAgentTask(
             page,
             `You are the 'EmergencyContactAgent'.
@@ -84,8 +81,8 @@ export async function runWorkflow(page: Page, goal: string, variables: Record<st
         );
         if (!emergencySuccess) throw new Error("EmergencyContactAgent failed.");
 
-        // Step 4: Submission Agent
-        console.log("--- Spawning: SubmissionAgent ---");
+        // Submission Section Agent
+        console.log("--- Starting: SubmissionAgent ---");
         const submissionSuccess = await runAgentTask(
             page,
             `You are the 'SubmissionAgent'.
@@ -100,16 +97,28 @@ export async function runWorkflow(page: Page, goal: string, variables: Record<st
             "SubmissionAgent"
         );
 
-        // Final Global Verification
         const finalSuccess = await verifySuccess(page);
         if (finalSuccess) {
-            console.log(`Workflow Completion Success! Report generated at ${logger.getLogDir()}/report.html`);
+            console.log(`Workflow Completed. Report available @ ${logger.getLogDir()}/report.html`);
             return true;
         } else {
-            // Fallback: Use Human in the Loop if autonomous verification fails?
-            // For now, just log failure.
-            console.log("Automated verification failed.");
-            return false;
+            console.log("Automated verification failed. Use human...");
+
+            const readline = await import("readline");
+            const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+
+            const answer = await new Promise<string>(resolve => {
+                rl.question("Did the form submit successfully? (y/n): ", resolve);
+            });
+            rl.close();
+
+            if (answer.toLowerCase().startsWith('y')) {
+                console.log("Human confirmed pass, marking as passed.");
+                return true;
+            } else {
+                console.log("Human confirmed fail, marking as failed.");
+                return false;
+            }
         }
 
     } catch (error) {

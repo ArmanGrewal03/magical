@@ -5,7 +5,6 @@ import { runWorkflow } from "../agent/core";
 import * as fs from "fs";
 import * as path from "path";
 
-// 1. Define Typed Interface for Result
 interface EvalResult {
     iteration: number;
     success: boolean;
@@ -14,34 +13,30 @@ interface EvalResult {
     error?: string;
 }
 
-// 2. Main Eval Function
-async function runEvals(iterations: number = 5) {
-    console.log(`\n🧪 STARTING EVALUATIONS (${iterations} Runs)\n`);
+async function runEvals(iterations: number = 3) {
+    console.log(`\nStarting evaluations (${iterations} runs)\n`);
     const results: EvalResult[] = [];
     const startTimeGlobal = Date.now();
     const evalReportPath = path.join(process.cwd(), "evals_report.json");
 
     for (let i = 1; i <= iterations; i++) {
-        console.log(`\n--- Run ${i}/${iterations} ---`);
+        console.log(`\nRun ${i}/${iterations}`);
         const result = await runSingleEval(i);
         results.push(result);
 
-        // Immediate Feedback
-        const status = result.success ? "✅ SUCCESS" : "❌ FAILED";
+        const status = result.success ? "Passed" : "Failed";
         console.log(`Result: ${status} | Time: ${(result.durationMs / 1000).toFixed(2)}s`);
     }
 
     const endTimeGlobal = Date.now();
 
-    // 3. calculate Stats
     const successfulRuns = results.filter(r => r.success);
     const failedRuns = results.filter(r => !r.success);
     const successRate = (successfulRuns.length / iterations) * 100;
     const avgDuration = results.reduce((sum, r) => sum + r.durationMs, 0) / iterations;
 
-    // 4. Output Summary
     console.log("\n========================================");
-    console.log("📊 EVALUATION SUMMARY");
+    console.log("Evaluation Summary");
     console.log("========================================");
     console.log(`Total Runs:      ${iterations}`);
     console.log(`Success Rate:    ${successRate.toFixed(1)}%`);
@@ -50,13 +45,12 @@ async function runEvals(iterations: number = 5) {
     console.log("========================================\n");
 
     if (failedRuns.length > 0) {
-        console.log("⚠️ FAILED RUNS:");
+        console.log("Failed Runs:");
         failedRuns.forEach(r => {
             console.log(`- Run ${r.iteration}: ${r.error || "Unknown Error"}`);
         });
     }
 
-    // 5. Save Report to Disk
     const report = {
         timestamp: new Date().toISOString(),
         config: { iterations },
@@ -69,22 +63,19 @@ async function runEvals(iterations: number = 5) {
     };
 
     fs.writeFileSync(evalReportPath, JSON.stringify(report, null, 2));
-    console.log(`\nDetailed report saved to: ${evalReportPath}`);
+    console.log(`\n Report saved to: ${evalReportPath}`);
 }
 
-// 6. Helper to run a single iteration
 async function runSingleEval(iteration: number): Promise<EvalResult> {
     let browser: Browser | null = null;
     const startTime = Date.now();
 
     try {
-        browser = await chromium.launch({ headless: true }); // Headless for speed during evals
+        browser = await chromium.launch({ headless: true });
         const page = await browser.newPage();
 
-        // Navigate
         await page.goto("https://magical-medical-form.netlify.app/");
 
-        // Define test variables (randomized slightly if needed to test robustness)
         const variables = {
             firstName: "EvalUser",
             lastName: `Test${iteration}`,
@@ -98,7 +89,6 @@ async function runSingleEval(iteration: number): Promise<EvalResult> {
             emergencyPhone: "555-9999"
         };
 
-        // Run Agent
         const success = await runWorkflow(
             page,
             "Complete the medical form for evaluation purposes.",
@@ -124,9 +114,7 @@ async function runSingleEval(iteration: number): Promise<EvalResult> {
     }
 }
 
-// Execute
-// Allow passing number of iterations as CLI arg
 const args = process.argv.slice(2);
-const numRuns = args[0] ? parseInt(args[0], 10) : 3; // Default to 3 for quick checking
+const numRuns = args[0] ? parseInt(args[0], 10) : 3;
 
 runEvals(numRuns).catch(console.error);

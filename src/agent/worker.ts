@@ -23,16 +23,15 @@ export async function runAgentTask(
 
     try {
         console.log(`[${agentName}] Starting task...`);
-        const result = await generateText({
+        const result = await generateText({ // VERCEL AI SDK
             model,
-            messages, // Initial messages
+            messages,
             tools,
-            maxSteps: maxSteps, // Allow the model to run its course
+            maxSteps: maxSteps,
             onStepFinish: async ({ text, toolCalls, toolResults }) => {
                 currentStepCount++;
                 console.log(`[${agentName}] Step ${currentStepCount} finished.`);
 
-                // Log securely
                 logger.logStep({
                     step: currentStepCount,
                     agent: agentName,
@@ -50,7 +49,6 @@ export async function runAgentTask(
 
     } catch (error) {
         console.error(`[${agentName}] Crashed:`, error);
-        // Log the crash
         logger.logStep({
             step: currentStepCount + 1,
             agent: agentName,

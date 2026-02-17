@@ -7,22 +7,18 @@ import { runWorkflow } from "../agent/core";
 
 const app = new Hono();
 
-// Helper to run workflow in a fresh browser context
 async function executeWorkflow(variables: Record<string, string> = {}) {
     console.log("Executing workflow...");
-    const browser = await chromium.launch({ headless: false }); // Headless false for demo/debug
+    const browser = await chromium.launch({ headless: false });
     const page = await browser.newPage();
 
     try {
-        // Navigate to start
         await page.goto("https://magical-medical-form.netlify.app/");
 
-        // Run the Multi-Agent Supervisor
         const success = await runWorkflow(
             page,
             "Execute full medical form submission workflow.",
             {
-                // Defaults
                 firstName: "John",
                 lastName: "Doe",
                 dob: "1990-01-01",
@@ -32,8 +28,8 @@ async function executeWorkflow(variables: Record<string, string> = {}) {
                 allergies: "None",
                 medications: "None",
                 emergencyContact: "Jane Doe",
-                emergencyPhone: "555-0123",
-                ...variables // Override with API inputs
+                emergencyPhone: "123-1234",
+                ...variables
             }
         );
 
@@ -52,13 +48,11 @@ async function executeWorkflow(variables: Record<string, string> = {}) {
     }
 }
 
-// API Endpoint to trigger workflow
+// API Endpoint
 app.post("/workflow", async (c) => {
     const body = await c.req.json();
     const variables = body.variables || {};
 
-    // triggers asynchronously to not block response? 
-    // For this demo, let's await it so we can see result in response
     const result = await executeWorkflow(variables);
 
     return c.json({ success: result });
@@ -66,13 +60,12 @@ app.post("/workflow", async (c) => {
 
 app.get("/health", (c) => c.text("OK"));
 
-// Scheduler: Run every 5 minutes
+// Scheduler via CRON
 cron.schedule("*/5 * * * *", () => {
     console.log("Running scheduled workflow...");
     executeWorkflow({
         firstName: "Scheduled",
         lastName: "User",
-        // We can add logic to randomize this if needed
     });
 });
 

@@ -7,7 +7,7 @@ export async function createSession(url: string): Promise<Page> {
   });
   const activePage = await browser.newPage();
   if (!activePage) {
-    throw new Error("No page found");
+    throw new Error("Page not found");
   }
 
   await activePage.goto(url);

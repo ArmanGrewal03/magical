@@ -2,7 +2,7 @@ import { Page } from "playwright";
 
 export async function verifySuccess(page: Page): Promise<boolean> {
     try {
-        // Check for common success indicators
+        // Check for success indicators
         const content = await page.content();
         const successKeywords = ["Success", "Thank you", "submitted", "completed"];
 
@@ -14,7 +14,6 @@ export async function verifySuccess(page: Page): Promise<boolean> {
         // Check visible text
         for (const keyword of successKeywords) {
             if (content.toLowerCase().includes(keyword.toLowerCase())) {
-                // Double check visibility to be sure
                 const locator = page.getByText(keyword, { exact: false });
                 if (await locator.isVisible()) {
                     return true;

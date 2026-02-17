@@ -4,7 +4,6 @@ import { tool } from "ai";
 import * as readline from "readline";
 import * as path from "path";
 
-// Helper for human input
 async function promptUser(question: string): Promise<string> {
     const rl = readline.createInterface({
         input: process.stdin,
@@ -28,13 +27,13 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
             }),
             execute: async ({ name }) => {
                 try {
-                    if (!screenshotDir) return "Screenshot directory not configured.";
+                    if (!screenshotDir) return "Screenshot directory not found!!.";
                     const filename = `${name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${Date.now()}.png`;
                     const filePath = path.join(screenshotDir, filename);
                     await page.screenshot({ path: filePath });
-                    return `Screenshot saved to ${filePath}`;
+                    return `Screenshot saved @ ${filePath}`;
                 } catch (error) {
-                    return `Failed to take screenshot: ${error}`;
+                    return `Screenshot failed: ${error}`;
                 }
             },
         }),
@@ -45,10 +44,9 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
                 question: z.string().describe("The question to ask the human"),
             }),
             execute: async ({ question }) => {
-                console.log(`\n\n🛑 AGENT REQUESTS INPUT: ${question}\n`);
+                console.log(`\n${question}\n`);
                 try {
-                    // In a real deployed server app, this would push a notification or pause the job state.
-                    // For this local run, we use stdio.
+                    // For this take home assignment, using stdio for humaninput
                     const answer = await promptUser("Your answer:");
                     return `Human replied: ${answer}`;
                 } catch (error) {
@@ -67,7 +65,7 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
                     await page.goto(url);
                     return `Navigated to ${url}`;
                 } catch (error) {
-                    return `Failed to navigate to ${url}: ${error}`;
+                    return `Failed to navigate: ${error}`;
                 }
             },
         }),
@@ -80,19 +78,13 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
             }),
             execute: async ({ selectorOrLabel, value }) => {
                 try {
-                    // Strategy: Try greedy matching
-                    // 1. Precise CSS selector
-                    // 2. Label
-                    // 3. Placeholder
-                    // 4. Text
-
+                    // Attemps to find element by CSS selector, label, placeholder, or text (in that order)
                     const isSelector = selectorOrLabel.startsWith("#") || selectorOrLabel.startsWith(".") || selectorOrLabel.includes("[");
                     let locator;
 
                     if (isSelector) {
                         locator = page.locator(selectorOrLabel).first();
                     } else {
-                        // Inherently try to find by label first
                         locator = page.getByLabel(selectorOrLabel).first();
                         if (!(await locator.count())) {
                             locator = page.getByPlaceholder(selectorOrLabel).first();
@@ -116,9 +108,6 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
             execute: async ({ selectorOrText }) => {
                 try {
                     let locator;
-                    // Improved check: Only treat as selector if it looks strictly like one (ID, class, attribute)
-                    // or if it contains selector combinators.
-                    // Simple text like "Submit" should be treated as text.
                     const isSelector = selectorOrText.startsWith("#") ||
                         selectorOrText.startsWith(".") ||
                         selectorOrText.includes("[") ||
@@ -127,7 +116,6 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
                     if (isSelector) {
                         locator = page.locator(selectorOrText).first();
                     } else {
-                        // Prioritize interactive elements
                         locator = page.getByRole('button', { name: selectorOrText }).first();
                         if (!(await locator.count())) {
                             locator = page.getByRole('link', { name: selectorOrText }).first();
@@ -162,7 +150,6 @@ export const createAgentTools = (page: Page, screenshotDir?: string) => {
                     }
 
                     await locator.waitFor({ state: "visible", timeout: 3000 });
-                    // try by label first, then value
                     try {
                         await locator.selectOption({ label: value });
                     } catch {
