@@ -58,15 +58,33 @@ curl -X POST http://localhost:3000/workflow \
   }'
 ```
 
-## How It Works
+## Implementation details
 
-**Multi-Agent Pattern**: One supervisor coordinates 4 specialized agents. Each agent has a narrow job, which reduces errors.
+I built this with a focus on reliability and verification, reflecting the engineering values described in the role.
 
-**Smart Tools**: Instead of brittle CSS selectors, tools find elements by label, role, or text. If the HTML changes slightly, it still works.
+### Constrained agents (Supervisor-Worker pattern)
+Instead of one large agent with a massive context window, I broke the workflow down into four specialized workers (Personal, Medical, Emergency, Submission). Constraining an agent to a small subset of the workflow is key to preventing hallucinations. The personal info agent can't accidentally fill out medical fields because its prompt constraint prevents it from even seeing them.
 
-**Audit Logs**: Every run saves an HTML report with screenshots and reasoning steps.
+### Rigorous verification systems
+To "guarantee agents do the right thing every time," I implemented a two-layer verification system:
+1. **Automated checks:** The agent verifies its own extensive success criteria (URL changes, DOM keywords) before completing a task.
+2. **Human-in-the-loop:** If the automated check fails, the system pauses and yields control to a human via the `askHuman` tool. This ensures no task is ever dropped silently.
 
-**Human Fallback**: If automated verification fails, it asks you to confirm success.
+### Self-healing browser interaction
+To "push the frontier of browser interaction," I moved away from brittle CSS selectors. The tools use a fuzzy matching hierarchy:
+1. Semantic match (Label/Role) - preferred
+2. Text match (Placeholder/Content)
+3. CSS fallback
+
+This means the agent finds fields the way a human does—by reading the label. If the underlying HTML structure changes but the "First Name" label remains, the agent still works. This adds enterprise-grade stability to the automation.
+
+### Data-driven evaluation
+Reliability needs to be measured, not just felt. I built an evaluation harness (`npm run eval`) that executes the workflow N times to calculate an objective success rate. This allows for rigorous "model bake-offs"—we can empirically test if Gemini Pro justifies its cost over Flash by comparing their success rates on this specific workflow.
+
+### Production readiness
+The system is built for scale:
+- **API-first design:** The `POST /workflow` endpoint means this can sit behind a queue (like BullMQ) in production.
+- **Deep observability:** The system generates a complete HTML audit trail of every reasoning step and tool call.
 
 ## Architecture
 
