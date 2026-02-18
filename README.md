@@ -1,10 +1,10 @@
-# Magical Project
+# AI Agent Project
 
 Multi-agent browser automation for filling out medical forms. Built with TypeScript, Playwright, and Gemini.
 
 ## What It Does
 
-Fills out the [Magical medical form](https://magical-medical-form.netlify.app/) using AI agents. Each agent handles one section:
+Fills out the medical form using AI agents. Each agent handles one section:
 - Personal info (name, DOB, medical ID)
 - Medical info (gender, blood type, allergies)
 - Emergency contact
